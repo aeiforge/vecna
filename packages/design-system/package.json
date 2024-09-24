@@ -1,0 +1,29 @@
+{
+  "name": "@aeiforge/vecna-design-system",
+  "version": "0.0.1",
+  "author": "Aeiforge",
+  "homepage": "https://github.com/aeiforge/vecna",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aeiforge/vecna.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aeiforge/vecna/issues",
+    "email": "administrator@aeiforge.com"
+  },
+  "keywords": [
+    "aeiforge",
+    "vecna",
+    "design-system"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "cpx": "cp ../../.npmrc ../../dist/packages/design-system",
+    "publish": "pnpm run cpx && cd ../../dist/packages/design-system && pnpm publish --no-git-checks"
+  },
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "typings": "./index.d.ts"
+}

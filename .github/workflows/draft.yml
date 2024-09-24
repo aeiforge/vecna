@@ -1,0 +1,115 @@
+name: Draft Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  actions: read
+
+jobs:
+  create-tag:
+    outputs:
+      tag: ${{ steps.tag_version.outputs.new_tag }}
+    name: Create Tag
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          dry_run: true
+          default_bump: patch
+
+  delete-draft:
+    needs: create-tag
+    name: Delete Draft Release
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh -y
+
+      - name: Get matching tags and delete draft releases
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          VERSION: ${{ needs.create-tag.outputs.tag }}
+        run: |
+          # Fetch all tags that match the specified version
+          matching_tags=$(gh release list --json tagName --jq '.[] | select(.tagName | startswith("'"$VERSION"'")) | .tagName')
+
+          # Loop through each matching tag
+          for tag in $matching_tags; do
+            # Check if the release is a draft
+            if gh release view $tag --json 'draft' | jq -e '.draft' > /dev/null; then
+              echo "Deleting draft release with tag $tag..."
+              gh release delete $tag -y
+            fi
+          done
+
+  draft-release:
+    needs: [create-tag, delete-draft]
+    name: Draft Release
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git user
+        run: |
+          git config --global user.name "Aeiforge Administrator"
+          git config --global user.email "administrator@aeiforge.com"
+          git config --global user.username "aeiforge-administrator"
+          git pull origin main
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Cache node_modules dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm i
+
+      - name: Nx Report
+        run: pnpm exec nx report
+
+      - name: Create a GitHub release using NX
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
+        run: pnpm run release --version=${{ needs.create-tag.outputs.tag }}
+
+      - name: Push to GitHub
+        run: git push

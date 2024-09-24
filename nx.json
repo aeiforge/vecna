@@ -5,7 +5,11 @@
     "production": [
       "default",
       "!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
-      "!{projectRoot}/tsconfig.spec.json"
+      "!{projectRoot}/tsconfig.spec.json",
+      "!{projectRoot}/jest.config.[jt]s",
+      "!{projectRoot}/src/test-setup.[jt]s",
+      "!{projectRoot}/test-setup.[jt]s",
+      "!{projectRoot}/.stylelintrc(.(json|yml|yaml|js))?"
     ],
     "sharedGlobals": ["{workspaceRoot}/.github/workflows/ci.yml"]
   },
@@ -15,7 +19,7 @@
       "plugin": "@nx/vite/plugin",
       "options": {
         "buildTargetName": "build",
-        "testTargetName": "test",
+        "testTargetName": "vite-test",
         "serveTargetName": "serve",
         "previewTargetName": "preview",
         "serveStaticTargetName": "serve-static",
@@ -29,6 +33,177 @@
         "serveTargetName": "serve",
         "previewTargetName": "preview"
       }
+    },
+    {
+      "plugin": "@nx/eslint/plugin",
+      "options": {
+        "targetName": "lint"
+      }
+    },
+    {
+      "plugin": "nx-stylelint/plugin",
+      "options": {
+        "targetName": "stylelint"
+      }
+    },
+    {
+      "plugin": "@nx/jest/plugin",
+      "options": {
+        "targetName": "jest-test"
+      }
     }
-  ]
+  ],
+  "targetDefaults": {
+    "build": {
+      "cache": true,
+      "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "outputs": ["{options.outputPath}"]
+    },
+    "jest-test": {
+      "cache": true,
+      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
+      "options": {
+        "passWithNoTests": true,
+        "jestConfig": "../../{projectRoot}/jest.config.ts"
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    },
+    "vite-test": {
+      "cache": true,
+      "inputs": ["default", "^production"],
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "config": "../../{projectRoot}/vite.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "cache": true,
+      "inputs": [
+        "default",
+        "{workspaceRoot}/.eslintrc.json",
+        "{workspaceRoot}/.eslintignore",
+        "{workspaceRoot}/eslint.config.js"
+      ]
+    },
+    "stylelint": {
+      "cache": true,
+      "options": {
+        "lintFilePatterns": [
+          "{projectRoot}/**/*.scss",
+          "{projectRoot}/**/*.css"
+        ],
+        "formatter": "compact",
+        "args": ["--allow-empty-input"]
+      }
+    }
+  },
+  "release": {
+    "projects": ["packages/*", "elias-platform"],
+    "version": {
+      "preVersionCommand": "pnpm dlx nx run-many -t build",
+      "generatorOptions": {
+        "packageRoot": "{projectRoot}",
+        "currentVersionResolver": "git-tag",
+        "specifierSource": "conventional-commits",
+        "fallbackCurrentVersionResolver": "disk"
+      },
+      "git": {
+        "commit": true,
+        "tag": false,
+        "commitMessage": "bump({version}): bumped packages version to {version}"
+      }
+    },
+    "changelog": {
+      "automaticFromRef": true,
+      "workspaceChangelog": {
+        "file": false,
+        "createRelease": "github"
+      },
+      "git": {
+        "commit": false,
+        "tag": true,
+        "commitMessage": "chore({version}): updated changelog for {version}"
+      }
+    },
+    "releaseTagPattern": "v{version}",
+    "conventionalCommits": {
+      "types": {
+        "breaking": {
+          "semverBump": "major",
+          "changelog": {
+            "title": "💥 Breaking Changes"
+          }
+        },
+        "feat": {
+          "semverBump": "minor",
+          "changelog": {
+            "title": "🚀 Features"
+          }
+        },
+        "perf": {
+          "semverBump": "patch",
+          "changelog": {
+            "title": "🚀 Performance Improvements"
+          }
+        },
+        "refactor": {
+          "semverBump": "patch",
+          "changelog": {
+            "title": "💅 Refactor"
+          }
+        },
+        "revert": {
+          "semverBump": "patch",
+          "changelog": {
+            "title": "💅 Revert"
+          }
+        },
+        "fix": {
+          "semverBump": "patch",
+          "changelog": {
+            "title": "🐛 Bug Fixes"
+          }
+        },
+        "style": {
+          "semverBump": "patch",
+          "changelog": {
+            "title": "💅 Style Improvements"
+          }
+        },
+        "docs": {
+          "semverBump": "none",
+          "changelog": {
+            "title": "📚 Documentation"
+          }
+        },
+        "test": {
+          "semverBump": "none",
+          "changelog": {
+            "title": "🧪 Tests"
+          }
+        },
+        "chore": {
+          "semverBump": "none",
+          "changelog": {
+            "title": "🧹 Chore"
+          }
+        },
+        "ci": {
+          "semverBump": "none",
+          "changelog": {
+            "title": "👷 CI"
+          }
+        },
+        "bump": false,
+        "release": false
+      }
+    }
+  }
 }

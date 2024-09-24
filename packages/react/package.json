@@ -1,0 +1,34 @@
+{
+  "name": "@aeiforge/vecna-react",
+  "version": "0.0.1",
+  "author": "Aeiforge",
+  "homepage": "https://github.com/aeiforge/vecna",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aeiforge/vecna.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aeiforge/vecna/issues",
+    "email": "administrator@aeiforge.com"
+  },
+  "keywords": [
+    "aeiforge",
+    "vecna",
+    "react"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "cpx": "cp ../../.npmrc ../../dist/packages/react",
+    "publish": "pnpm run cpx && cd ../../dist/packages/react && pnpm publish --no-git-checks"
+  },
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.js"
+    }
+  }
+}

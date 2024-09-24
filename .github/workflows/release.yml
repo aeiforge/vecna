@@ -1,17 +1,7 @@
-name: CI
-
+name: Release
 on:
-  push:
-    branches: [main]
-
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
-
-permissions:
-  actions: read
-  contents: read
-
+  release:
+    types: [published]
 jobs:
   detect-changes:
     name: Detect Changes
@@ -51,18 +41,10 @@ jobs:
     name: Lint and Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v4
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4
-        with:
-          version: 9.10.0
-
-      - name: Start NX CI
-        run: pnpm dlx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -89,3 +71,39 @@ jobs:
 
       - name: NX Affected
         run: pnpm exec nx affected -t lint stylelint test
+
+  publish:
+    name: Publish
+    needs: [detect-changes, lint-and-test]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Cache node_modules dependencies
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm i
+
+      - name: Publish to registry
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm run publish:all
