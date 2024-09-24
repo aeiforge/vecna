@@ -102,6 +102,12 @@
         "formatter": "compact",
         "args": ["--allow-empty-input"]
       }
+    },
+    "publish": {
+      "dependsOn": ["build"],
+      "options": {
+        "packageRoot": "dist/packages/{projectRoot}"
+      }
     }
   },
   "release": {

@@ -71,7 +71,6 @@ jobs:
 
       - name: NX Affected
         run: pnpm exec nx affected -t lint stylelint test
-
   publish:
     name: Publish
     needs: [detect-changes, lint-and-test]
