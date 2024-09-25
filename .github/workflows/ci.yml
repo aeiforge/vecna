@@ -38,7 +38,7 @@ jobs:
           echo "skip=${{ steps.check_message.outputs.skip }}" > check-commit-message.txt
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: check-commit-message
           path: check-commit-message.txt
