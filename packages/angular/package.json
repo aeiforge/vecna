@@ -20,7 +20,7 @@
     "access": "public"
   },
   "scripts": {
-    "cpx": "cp ../../.npmrc ../../dist/packages/angular",
+    "cpx": "cp ../../.npmrc ../../dist/packages/angular/.npmrc",
     "publish": "pnpm run cpx && cd ../../dist/packages/angular && pnpm publish --no-git-checks"
   },
   "peerDependencies": {
