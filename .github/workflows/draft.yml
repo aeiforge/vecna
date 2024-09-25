@@ -21,11 +21,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: check-commit-message
+          path: check-commit-message.txt
 
       - name: Read artifacts
         id: artifact
         run: |
-          echo "skip=$(cat check-commit-message.txt)" >> $GITHUB_OUTPUT
+          echo "skip=$(cat check-commit-message/check-commit-message.txt)" >> $GITHUB_OUTPUT
   create-tag:
     if: needs.check-commit-message.outputs.skip != 'true'
     outputs:
