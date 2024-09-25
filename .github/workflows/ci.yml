@@ -35,13 +35,13 @@ jobs:
 
       - name: Save to artifacts
         run: |
-          echo "skip=${{ steps.check_message.outputs.skip }}" > check-commit-message.txt
+          echo "skip=${{ steps.check_message.outputs.skip }}" > message.txt
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: check-commit-message
-          path: check-commit-message.txt
+          path: message.txt
   detect-changes:
     if: needs.check-commit-message.outputs.skip != 'true'
     needs: check-commit-message
