@@ -11,34 +11,27 @@ permissions:
 
 jobs:
   check-commit-message:
+    if: github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    name: Check Commit Message
     outputs:
-      skip: ${{ steps.check_message.outputs.skip }}
+      skip: ${{ steps.artifact.outputs.skip }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
         with:
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          name: check-commit-message
 
-      - name: Check commit message
-        id: check_message
+      - name: Read artifacts
+        id: artifact
         run: |
-          if [[ "${{ github.event.head_commit.message }}" =~ ^bump\([0-9]+\.[0-9]+\.[0-9]+\): ]]; then
-            echo "Commit message matches the ignore pattern."
-            echo "::set-output name=skip::true"
-          else
-            echo "Commit message: ${{ github.event.head_commit.message }}"
-            echo "::set-output name=skip::false"
-          fi
+          echo "skip=$(cat check-commit-message.txt)" >> $GITHUB_OUTPUT
   create-tag:
-    needs: check-commit-message
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.ref == 'refs/heads/main' &&
-      needs.check-commit-message.outputs.skip != 'true'
+    if: needs.check-commit-message.outputs.skip != 'true'
     outputs:
       tag: ${{ steps.tag_version.outputs.new_tag }}
     name: Create Tag
+    needs: check-commit-message
     permissions:
       contents: write
     runs-on: ubuntu-latest
