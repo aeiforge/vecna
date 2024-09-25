@@ -8,8 +8,12 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     environment: production
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       - name: Setup PNPM
         uses: pnpm/action-setup@v4

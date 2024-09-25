@@ -30,7 +30,7 @@ axios.interceptors.request.use(config => {
       description:
         'Whether or not to enable verbose logging, defaults to false',
       type: 'boolean',
-      default: false,
+      default: true,
     })
     .parseAsync();
 

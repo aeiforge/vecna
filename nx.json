@@ -123,7 +123,8 @@
       "git": {
         "commit": true,
         "tag": false,
-        "commitMessage": "bump({version}): bumped packages version to {version}"
+        "commitMessage": "bump({version}): bumped packages version to {version}",
+        "commitArgs": "-S"
       }
     },
     "changelog": {
@@ -135,7 +136,8 @@
       "git": {
         "commit": false,
         "tag": true,
-        "commitMessage": "chore({version}): updated changelog for {version}"
+        "commitMessage": "chore({version}): updated changelog for {version}",
+        "commitArgs": "-S"
       }
     },
     "releaseTagPattern": "v{version}",
