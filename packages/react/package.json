@@ -20,7 +20,7 @@
     "access": "public"
   },
   "scripts": {
-    "cpx": "cp ../../.npmrc ../../dist/packages/react",
+    "cpx": "cp ../../.npmrc ../../dist/packages/react/.npmrc",
     "publish": "pnpm run cpx && cd ../../dist/packages/react && pnpm publish --no-git-checks"
   },
   "main": "./index.js",

@@ -20,7 +20,7 @@
     "access": "public"
   },
   "scripts": {
-    "cpx": "cp ../../.npmrc ../../dist/packages/icons",
+    "cpx": "cp ../../.npmrc ../../dist/packages/icons/.npmrc",
     "publish": "pnpm run cpx && cd ../../dist/packages/icons && pnpm publish --no-git-checks"
   },
   "main": "./index.js",

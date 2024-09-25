@@ -2,78 +2,10 @@ name: Release
 on:
   release:
     types: [published]
+
 jobs:
-  detect-changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v45
-
-      - name: Get branch names
-        uses: tj-actions/branch-names@v8
-        id: branch-names
-
-      - name: List all changed files
-        env:
-          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
-        run: |
-          for file in ${ALL_CHANGED_FILES}; do
-            echo "$file was changed"
-          done
-
-      - name: Log branch
-        run: |
-          echo "is_default: ${{ steps.branch-names.outputs.is_default }}"
-          if [ "${{ steps.branch-names.outputs.is_default }}" == "true" ]; then
-            echo "Running on ${{ steps.branch-names.outputs.current_branch }}"
-            echo "BASE SHA ${{ github.sha }}"
-          else
-            echo "Running on ${{ steps.branch-names.outputs.current_branch }} -> ${{ steps.branch-names.outputs.base_ref_branch }}"
-            echo "HEAD SHA ${{ github.event.pull_request.head.sha }}"
-            echo "BASE SHA ${{ github.event.pull_request.base.sha }}"
-          fi
-
-  lint-and-test:
-    name: Lint and Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup PNPM
-        uses: pnpm/action-setup@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - name: Cache node_modules dependencies
-        uses: actions/cache@v3
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-node_modules-
-            ${{ runner.os }}-
-
-      - name: Install dependencies
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: pnpm i
-
-      - name: NX SET SHAS
-        uses: nrwl/nx-set-shas@v4
-
-      - name: NX Affected
-        run: pnpm exec nx affected -t lint stylelint test
   publish:
     name: Publish
-    needs: [detect-changes, lint-and-test]
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -89,7 +21,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Cache node_modules dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node_modules-${{ hashFiles('**/pnpm-lock.yaml') }}
