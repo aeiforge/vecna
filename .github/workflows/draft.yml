@@ -1,42 +1,134 @@
 name: Draft Release
 
 on:
-  workflow_run:
-    workflows: [ "CI" ]
-    types:
-      - completed
+  push:
+    branches: [main]
 
 permissions:
   actions: read
+  contents: read
 
 jobs:
   check-commit-message:
-    if: github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    name: Check Commit Message
     outputs:
-      skip: ${{ steps.artifact.outputs.skip }}
+      skip: ${{ steps.check_message.outputs.skip }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.DEPLOY_KEY }}
+      - name: Check commit message
+        id: check_message
+        run: |
+          if [[ "${{ github.event.head_commit.message }}" =~ ^bump\([0-9]+\.[0-9]+\.[0-9]+\): ]]; then
+            echo "Commit message matches the ignore pattern."
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "Commit message: ${{ github.event.head_commit.message }}"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
+      - name: Save to artifacts
+        run: |
+          echo "skip=${{ steps.check_message.outputs.skip }}" > message.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
           name: check-commit-message
+          path: message.txt
+  detect-changes:
+    if: needs.check-commit-message.outputs.skip != 'true'
+    needs: check-commit-message
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
-      - name: Read artifacts
-        id: artifact
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+
+      - name: Get branch names
+        uses: tj-actions/branch-names@v8
+        id: branch-names
+
+      - name: List all changed files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         run: |
-          echo "skip=$(cat message.txt)" >> $GITHUB_OUTPUT
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+          done
+
+      - name: Log branch
+        run: |
+          echo "is_default: ${{ steps.branch-names.outputs.is_default }}"
+          if [ "${{ steps.branch-names.outputs.is_default }}" == "true" ]; then
+            echo "Running on ${{ steps.branch-names.outputs.current_branch }}"
+            echo "BASE SHA ${{ github.sha }}"
+          else
+            echo "Running on ${{ steps.branch-names.outputs.current_branch }} -> ${{ steps.branch-names.outputs.base_ref_branch }}"
+            echo "HEAD SHA ${{ github.event.pull_request.head.sha }}"
+            echo "BASE SHA ${{ github.event.pull_request.base.sha }}"
+          fi
+
+  lint-and-test:
+    if: needs.check-commit-message.outputs.skip != 'true'
+    needs: check-commit-message
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    name: Lint and Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.10.0
+
+      - name: Start NX CI
+        run: pnpm dlx nx-cloud start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Cache node_modules dependencies
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node_modules-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-node_modules-
+            ${{ runner.os }}-
+
+      - name: Install dependencies
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: pnpm i
+
+      - name: NX SET SHAS
+        uses: nrwl/nx-set-shas@v4
+
+      - name: NX Affected
+        run: pnpm exec nx affected -t lint stylelint test
   create-tag:
     if: needs.check-commit-message.outputs.skip != 'true'
     outputs:
       tag: ${{ steps.tag_version.outputs.new_tag }}
     name: Create Tag
-    needs: check-commit-message
+    needs: [check-commit-message, detect-changes, lint-and-test]
     permissions:
       contents: write
     runs-on: ubuntu-latest
